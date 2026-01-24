@@ -1,0 +1,18 @@
+[[bin]]
+name = "rust_os"
+test = false
+bench = false
+
+[package]
+name = "rust_os"
+version = "0.1.0"
+edition = "2018"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+
+[dependencies]
+
