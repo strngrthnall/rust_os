@@ -1,27 +1,36 @@
-//! Rust OS - Kernel mínimo seguindo o Blog OS (https://os.phil-opp.com)
-//!
-//! Executar: `cargo run`
+//! Rust OS - Entry point do kernel.
 
-#![no_std]  // Sem biblioteca padrão (bare-metal)
-#![no_main] // Entry point customizado (_start)
-
-mod vga_buffer;
+#![no_std]
+#![no_main]
+#![feature(custom_test_frameworks)]
+#![test_runner(rust_os::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
+use rust_os::println;
 
-/// Handler de panic - exibe a mensagem e entra em loop infinito.
+/// Entry point chamado pelo bootloader.
+#[unsafe(no_mangle)]
+pub extern "C" fn _start() -> ! {
+    println!("Hello World{}", "!");
+
+    #[cfg(test)]
+    test_main();
+
+    loop {}
+}
+
+/// Panic handler para modo normal (exibe no VGA).
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
     loop {}
 }
 
-/// Entry point do kernel, chamado pelo bootloader.
-#[unsafe(no_mangle)]
-pub extern "C" fn _start() -> ! {
-    println!("Hello world{}", "!");
-    panic!("Some panic message");
-
-    #[allow(unreachable_code)]
-    loop {}
+/// Panic handler para testes (usa serial port).
+#[cfg(test)]
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    rust_os::test_panic_handler(info)
 }
