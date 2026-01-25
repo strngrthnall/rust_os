@@ -11,7 +11,9 @@ Sistema operacional mínimo em Rust, baseado no tutorial [Writing an OS in Rust]
 - [x] Testes automatizados com framework customizado
 - [x] Serial port para output de testes (UART 16550)
 - [x] Integração com QEMU (exit codes)
-- [ ] Interrupções
+- [x] CPU Exceptions (IDT + breakpoint handler)
+- [ ] Double Faults
+- [ ] Interrupções de hardware (timer, teclado)
 - [ ] Gerenciamento de memória
 
 ## Quick Start
@@ -27,7 +29,7 @@ sudo pacman -S qemu-system-x86 # Arch
 # Executar
 cargo run
 
-# Executar testes
+# Testes
 cargo test
 ```
 
@@ -38,8 +40,6 @@ cargo test
 | `cargo build` | Compila o kernel |
 | `cargo run` | Executa no QEMU |
 | `cargo test` | Executa todos os testes |
-| `cargo test --test basic_boot` | Teste de boot básico |
-| `cargo test --test should_panic` | Teste de panic |
 
 ## Estrutura
 
@@ -50,12 +50,13 @@ rust_os/
 ├── .cargo/config.toml       # Configuração de build
 ├── src/
 │   ├── main.rs              # Entry point
-│   ├── lib.rs               # Biblioteca com test framework
-│   ├── vga_buffer.rs        # Driver VGA + macros print
-│   └── serial.rs            # Driver serial UART + macros
+│   ├── lib.rs               # Biblioteca + test framework
+│   ├── vga_buffer.rs        # Driver VGA
+│   ├── serial.rs            # Driver serial UART
+│   └── interrupts.rs        # IDT e handlers de exceção
 └── tests/
-    ├── basic_boot.rs        # Teste de boot e println
-    └── should_panic.rs      # Teste que deve panic
+    ├── basic_boot.rs
+    └── should_panic.rs
 ```
 
 ## Arquitetura
@@ -64,15 +65,9 @@ rust_os/
 
 | Módulo | Descrição |
 |--------|----------|
-| `vga_buffer` | Escrita no VGA text mode (0xb8000), 80x25, 16 cores |
-| `serial` | UART 16550 para output de testes via porta 0x3F8 |
-| `lib` | Test runner, trait `Testable`, integração QEMU |
-
-### Testes
-
-O framework de testes customizado usa serial port para output e exit codes do QEMU:
-- `QemuExitCode::Success` (0x10) → exit 0
-- `QemuExitCode::Failed` (0x11) → exit 1
+| `vga_buffer` | VGA text mode (0xb8000), 80x25 |
+| `serial` | UART 16550 (0x3F8) para testes |
+| `interrupts` | IDT com handler de breakpoint |
 
 ## Referências
 
