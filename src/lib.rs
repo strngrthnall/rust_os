@@ -14,6 +14,13 @@ pub mod gdt;
 
 use core::panic::PanicInfo;
 
+/// Loop infinito com instrução HLT para economia de energia.
+pub fn hlt_loop() -> ! {
+    loop {
+        x86_64::instructions::hlt();
+    }
+}
+
 /// Exit codes para comunicação com QEMU via porta 0xf4.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
@@ -62,7 +69,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
-    loop {}
+    hlt_loop();
 }
 
 /// Entry point para `cargo test` na lib.
@@ -71,7 +78,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
 pub extern "C" fn _start() -> ! {
     init();
     test_main();
-    loop {}
+    hlt_loop();
 }
 
 #[cfg(test)]
@@ -80,8 +87,10 @@ fn panic(info: &PanicInfo) -> ! {
     test_panic_handler(info)
 }
 
-/// Inicializa os subsistemas do kernel (GDT, IDT).
+/// Inicializa os subsistemas do kernel (GDT, IDT, PICs).
 pub fn init() {
     gdt::init();
     interrupts::init_idt();
+    unsafe { interrupts::PICS.lock().initialize() };
+    x86_64::instructions::interrupts::enable();
 }

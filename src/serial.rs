@@ -19,10 +19,14 @@ lazy_static! {
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use fmt::Write;
-    SERIAL1
+    use x86_64::instructions::interrupts;
+
+    interrupts::without_interrupts(|| {
+        SERIAL1
         .lock()
         .write_fmt(args)
         .expect("Printing to serial failed");
+    })
 }
 
 /// Macro para print na serial sem newline.

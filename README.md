@@ -13,7 +13,7 @@ Sistema operacional mínimo em Rust, baseado no tutorial [Writing an OS in Rust]
 - [x] Integração com QEMU (exit codes)
 - [x] CPU Exceptions (IDT + breakpoint handler)
 - [x] Double Faults (GDT + TSS + IST)
-- [ ] Interrupções de hardware (timer, teclado)
+- [x] Interrupções de hardware (PIC 8259, timer, teclado)
 - [ ] Gerenciamento de memória
 
 ## Quick Start
@@ -53,24 +53,22 @@ rust_os/
 │   ├── lib.rs               # Biblioteca + test framework
 │   ├── vga_buffer.rs        # Driver VGA
 │   ├── serial.rs            # Driver serial UART
-│   ├── interrupts.rs        # IDT e handlers de exceção
-│   └── gdt.rs               # GDT + TSS para double faults
+│   ├── interrupts.rs        # IDT, PICs e handlers
+│   └── gdt.rs               # GDT + TSS
 └── tests/
     ├── basic_boot.rs
     ├── should_panic.rs
-    └── stack_overflow.rs    # Teste de double fault
+    └── stack_overflow.rs
 ```
 
-## Arquitetura
-
-### Módulos
+## Módulos
 
 | Módulo | Descrição |
 |--------|----------|
 | `vga_buffer` | VGA text mode (0xb8000), 80x25 |
 | `serial` | UART 16550 (0x3F8) para testes |
-| `interrupts` | IDT com handlers de breakpoint e double fault |
-| `gdt` | GDT + TSS com stack separada para double faults (IST) |
+| `interrupts` | IDT + PIC 8259 (timer, teclado) |
+| `gdt` | GDT + TSS com IST para double faults |
 
 ## Referências
 

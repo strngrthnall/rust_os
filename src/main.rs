@@ -19,8 +19,7 @@ pub extern "C" fn _start() -> ! {
     #[cfg(test)]
     test_main();
 
-    println!("It did not crash!");
-    loop {}
+    rust_os::hlt_loop();
 }
 
 /// Panic handler para modo normal (exibe no VGA).
@@ -28,7 +27,7 @@ pub extern "C" fn _start() -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
-    loop {}
+    rust_os::hlt_loop();
 }
 
 /// Panic handler para testes (usa serial port).
