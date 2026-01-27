@@ -1,5 +1,4 @@
 //! Teste de integração: verifica boot básico e println.
-
 #![no_std]
 #![no_main]
 #![feature(custom_test_frameworks)]
