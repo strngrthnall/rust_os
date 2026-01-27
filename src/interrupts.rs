@@ -2,11 +2,11 @@
 //!
 //! Configura a IDT e os PICs 8259 para tratar exceções e interrupções de hardware.
 
-use crate::{gdt, print, println};
+use crate::{gdt, hlt_loop, print, println};
 use lazy_static::lazy_static;
 use pic8259::ChainedPics;
 use spin;
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
+use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
 /// Índices das interrupções de hardware (IRQs remapeadas).
 #[derive(Debug, Clone, Copy)]
@@ -28,6 +28,21 @@ impl From<InterruptIndex> for usize {
     }
 }
 
+
+extern "x86-interrupt" fn page_fault_handler(
+    stack_frame: InterruptStackFrame,
+    error_code: PageFaultErrorCode
+) {
+    use x86_64::registers::control::Cr2;
+
+    println!("EXCEPTION: PAGE FAULT");
+    println!("Accessed Address: {:?}", Cr2::read());
+    println!("Error code: {:?}", error_code);
+    println!("{:#?}", stack_frame);
+    hlt_loop();
+}
+
+
 // ============================================================================
 // PICs 8259
 // ============================================================================
@@ -39,7 +54,11 @@ pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
 
 /// PICs encadeados (master + slave) com mutex para acesso thread-safe.
 pub static PICS: spin::Mutex<ChainedPics> =
-    spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
+    spin::Mutex::new(
+        unsafe { 
+            ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) 
+        }
+    );
 
 // ============================================================================
 // Exception Handlers
@@ -119,6 +138,7 @@ lazy_static! {
         }
         idt[InterruptIndex::Timer.into()].set_handler_fn(timer_interrupt_handler);
         idt[InterruptIndex::Keyboard.into()].set_handler_fn(keyboard_interrupt_handler);
+        idt.page_fault.set_handler_fn(page_fault_handler);
         idt
     };
 }
