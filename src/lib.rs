@@ -10,6 +10,7 @@
 pub mod serial;
 pub mod vga_buffer;
 pub mod interrupts;
+pub mod gdt;
 
 use core::panic::PanicInfo;
 
@@ -81,5 +82,6 @@ fn panic(info: &PanicInfo) -> ! {
 
 /// Inicializa os subsistemas do kernel (IDT, etc).
 pub fn init() {
+    gdt::init();
     interrupts::init_idt();
 }
