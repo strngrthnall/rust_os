@@ -5,8 +5,14 @@
 use crate::{gdt, hlt_loop, print, println};
 use lazy_static::lazy_static;
 use pic8259::ChainedPics;
-use spin;
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
+use spin::{Mutex};
+use x86_64::{
+    structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
+    registers::control::Cr2,
+    instructions::{port::Port}
+};
+use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
+
 
 /// Índices das interrupções de hardware (IRQs remapeadas).
 #[derive(Debug, Clone, Copy)]
@@ -33,8 +39,6 @@ extern "x86-interrupt" fn page_fault_handler(
     stack_frame: InterruptStackFrame,
     error_code: PageFaultErrorCode
 ) {
-    use x86_64::registers::control::Cr2;
-
     println!("EXCEPTION: PAGE FAULT");
     println!("Accessed Address: {:?}", Cr2::read());
     println!("Error code: {:?}", error_code);
@@ -93,9 +97,6 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
 
 /// Handler do teclado (IRQ 1) - lê scancode e imprime caractere.
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
-    use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
-    use spin::Mutex;
-    use x86_64::instructions::port::Port;
 
     lazy_static! {
         static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> = Mutex::new(
@@ -151,5 +152,5 @@ pub fn init_idt() {
 /// Testa se breakpoint exception é tratada corretamente.
 #[test_case]
 fn test_breakpoint_exception() {
-    x86_64::instructions::interrupts::int3();
+   x86_64::instructions::interrupts::int3();
 }
