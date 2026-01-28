@@ -1,18 +1,45 @@
-//! GDT (Global Descriptor Table) e TSS (Task State Segment).
+//! # GDT (Global Descriptor Table) e TSS (Task State Segment)
 //!
-//! Configura uma stack separada para double faults usando a IST (Interrupt Stack Table).
+//! ## Por que precisamos da GDT?
+//!
+//! Em modo protegido/long mode, a GDT define segmentos de memória.
+//! No x86_64, a segmentação é praticamente ignorada (flat memory),
+//! mas ainda precisamos de entries para:
+//!
+//! - **Kernel Code Segment**: Define o nível de privilégio (ring 0)
+//! - **TSS Segment**: Aponta para a Task State Segment
+//!
+//! ## Por que precisamos da TSS?
+//!
+//! A TSS contém a **Interrupt Stack Table (IST)**, que permite
+//! usar stacks diferentes para handlers de interrupção.
+//!
+//! Isso é **crítico** para double faults: se a stack estourou,
+//! o handler precisa de uma stack limpa para executar.
+//! Sem isso, teríamos um **triple fault** (reset da CPU).
+//!
+//! ## Fluxo
+//!
+//! ```text
+//! init() → Carrega GDT → Atualiza CS (code segment)
+//!                      → Carrega TSS no registrador TR
+//! ```
+//!
+//! ## Estudo baseado em
+//!
+//! [Double Faults](https://os.phil-opp.com/double-fault-exceptions/) - Blog OS
 
 use lazy_static::lazy_static;
 use x86_64::{
+    instructions::{
+        segmentation::{Segment, CS},
+        tables::load_tss,
+    },
     structures::{
         gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector},
         tss::TaskStateSegment,
     },
     VirtAddr,
-    instructions::{
-        segmentation::{Segment, CS},
-        tables::load_tss,
-    }
 };
 
 

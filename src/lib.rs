@@ -1,19 +1,36 @@
-//! Biblioteca do Rust OS - contém test framework e módulos compartilhados.
+//! # Rust OS - Biblioteca do Kernel
+//!
+//! Este módulo contém a infraestrutura compartilhada do kernel:
+//!
+//! - **Inicialização**: Função `init()` que configura GDT, IDT e PICs
+//! - **Test Framework**: `test_runner`, trait `Testable`, comunicação com QEMU
+//! - **Módulos Públicos**: vga_buffer, serial, interrupts, gdt, memory, allocator, task
+//!
+//! ## Por que uma biblioteca separada?
+//!
+//! O Rust trata binários e bibliotecas de forma diferente para testes.
+//! Separar em `lib.rs` permite que `cargo test` funcione corretamente,
+//! executando testes unitários dos módulos.
+//!
+//! ## Estudo baseado em
+//!
+//! [Writing an OS in Rust](https://os.phil-opp.com) - Philipp Oppermann
 
 #![no_std]
-#![cfg_attr(test, no_main)]
+#![cfg_attr(test, no_main)]  // Sem main() durante testes
 #![feature(custom_test_frameworks)]
-#![feature(abi_x86_interrupt)]
+#![feature(abi_x86_interrupt)]  // ABI para handlers de interrupção
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-pub mod serial;
-pub mod vga_buffer;
-pub mod interrupts;
-pub mod gdt;
-pub mod memory;
-pub mod allocator;
-pub mod task
+// Módulos públicos do kernel
+pub mod serial;      // UART 16550 para output de debug/testes
+pub mod vga_buffer;  // VGA text mode em 0xb8000
+pub mod interrupts;  // IDT + handlers de exceções e IRQs
+pub mod gdt;         // GDT + TSS para double faults
+pub mod memory;      // Paginação e frame allocator
+pub mod allocator;   // Heap allocator (fixed size block)
+pub mod task;        // Async/await: Task, Executor, Waker
 
 extern crate alloc;
 

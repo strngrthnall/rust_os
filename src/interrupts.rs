@@ -1,17 +1,50 @@
-//! Tratamento de interrupções e exceções da CPU.
+//! # Tratamento de Interrupções e Exceções
 //!
-//! Configura a IDT e os PICs 8259 para tratar exceções e interrupções de hardware.
+//! ## O que são interrupções?
+//!
+//! Interrupções são sinais que pausam a execução normal da CPU
+//! para executar um handler específico. Existem dois tipos:
+//!
+//! - **Exceções**: Geradas pela CPU (division by zero, page fault, etc.)
+//! - **IRQs**: Geradas por hardware externo (timer, teclado, etc.)
+//!
+//! ## IDT (Interrupt Descriptor Table)
+//!
+//! Tabela com 256 entries que mapeia números de interrupção para handlers:
+//!
+//! - **0-31**: Exceções reservadas pela CPU
+//! - **32-47**: IRQs remapeadas (originalmente 0-15)
+//! - **48-255**: Livres para uso
+//!
+//! ## PIC 8259 (Programmable Interrupt Controller)
+//!
+//! O PIC converte IRQs de hardware em interrupções para a CPU.
+//! São 2 PICs encadeados (master + slave) = 16 IRQs.
+//!
+//! Por padrão, IRQs 0-7 mapeiam para interrupções 0-7, que colidem
+//! com exceções! Por isso remapeamos para 32-47.
+//!
+//! ## Fluxo de uma interrupção
+//!
+//! ```text
+//! Hardware/CPU → Interrupção N → IDT[N] → Handler → EOI → Retorna
+//! ```
+//!
+//! ## Estudo baseado em
+//!
+//! - [CPU Exceptions](https://os.phil-opp.com/cpu-exceptions/)
+//! - [Hardware Interrupts](https://os.phil-opp.com/hardware-interrupts/)
 
 use crate::{gdt, hlt_loop, print, println};
 use lazy_static::lazy_static;
-use pic8259::ChainedPics;
-use spin::{Mutex};
-use x86_64::{
-    structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
-    registers::control::Cr2,
-    instructions::{port::Port}
-};
 use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
+use pic8259::ChainedPics;
+use spin::Mutex;
+use x86_64::{
+    instructions::port::Port,
+    registers::control::Cr2,
+    structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
+};
 
 
 /// Índices das interrupções de hardware (IRQs remapeadas).
@@ -116,6 +149,8 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
             }
         }
     }
+
+    crate::task::keyboard::add_scancode(scancode);
 
     unsafe {
         PICS.lock()
