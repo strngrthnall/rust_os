@@ -1,3 +1,5 @@
+//! Testes de integração para alocação de heap.
+
 #![no_std]
 #![no_main]
 #![feature(custom_test_frameworks)]
@@ -6,11 +8,14 @@
 
 extern crate alloc;
 
+use alloc::{boxed::Box, vec::Vec};
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use rust_os::{allocator::{self, HEAP_SIZE}, memory::{self, BootInfoFrameAllocator}};
+use rust_os::{
+    allocator::{self, HEAP_SIZE},
+    memory::{self, BootInfoFrameAllocator},
+};
 use x86_64::VirtAddr;
-use alloc::{boxed::Box, vec::Vec};
 
 entry_point!(main);
 
@@ -19,23 +24,20 @@ fn main(boot_info: &'static BootInfo) -> ! {
 
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let mut mapper = unsafe { memory::init(phys_mem_offset) };
-    let mut frame_allocator = unsafe {
-        BootInfoFrameAllocator::init(&boot_info.memory_map)
-    };
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
 
-    allocator::init_heap(&mut mapper, &mut frame_allocator)
-        .expect("heap initialization failed");
+    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
 
     test_main();
-
-    loop{}
-} 
+    loop {}
+}
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     rust_os::test_panic_handler(info)
 }
 
+/// Testa alocação simples com Box.
 #[test_case]
 fn simple_allocation() {
     let heap_value_1 = Box::new(41);
@@ -44,6 +46,7 @@ fn simple_allocation() {
     assert_eq!(*heap_value_2, 13);
 }
 
+/// Testa alocação de Vec grande.
 #[test_case]
 fn large_vec() {
     let n = 1000;
@@ -54,10 +57,22 @@ fn large_vec() {
     assert_eq!(vec.iter().sum::<u64>(), (n - 1) * n / 2);
 }
 
+/// Testa muitas alocações (verifica reutilização de memória).
 #[test_case]
 fn many_boxes() {
     for i in 0..HEAP_SIZE {
         let x = Box::new(i);
         assert_eq!(*x, i);
     }
+}
+
+/// Testa alocações com objeto de longa duração.
+#[test_case]
+fn many_boxes_long_lived() {
+    let long_lived = Box::new(1);
+    for i in 0..HEAP_SIZE {
+        let x = Box::new(i);
+        assert_eq!(*x, i);
+    }
+    assert_eq!(*long_lived, 1);
 }

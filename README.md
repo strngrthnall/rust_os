@@ -14,7 +14,9 @@ Sistema operacional mínimo em Rust, baseado no tutorial [Writing an OS in Rust]
 - [x] CPU Exceptions (IDT + breakpoint handler)
 - [x] Double Faults (GDT + TSS + IST)
 - [x] Interrupções de hardware (PIC 8259, timer, teclado)
-- [ ] Gerenciamento de memória
+- [x] Paginação de memória (page tables, frame allocator)
+- [x] Heap allocation (bump, linked list, fixed size block)
+- [ ] Multitasking
 
 ## Quick Start
 
@@ -54,11 +56,18 @@ rust_os/
 │   ├── vga_buffer.rs        # Driver VGA
 │   ├── serial.rs            # Driver serial UART
 │   ├── interrupts.rs        # IDT, PICs e handlers
-│   └── gdt.rs               # GDT + TSS
+│   ├── gdt.rs               # GDT + TSS
+│   ├── memory.rs            # Paginação e frame allocator
+│   ├── allocator.rs         # Heap allocator
+│   └── allocator/
+│       ├── bump.rs          # Bump allocator
+│       ├── linked_list.rs   # Linked list allocator
+│       └── fixed_size_block.rs  # Fixed size block allocator
 └── tests/
     ├── basic_boot.rs
     ├── should_panic.rs
-    └── stack_overflow.rs
+    ├── stack_overflow.rs
+    └── heap_allocation.rs   # Testes de alocação
 ```
 
 ## Módulos
@@ -69,6 +78,8 @@ rust_os/
 | `serial` | UART 16550 (0x3F8) para testes |
 | `interrupts` | IDT + PIC 8259 (timer, teclado) |
 | `gdt` | GDT + TSS com IST para double faults |
+| `memory` | Page tables, tradução de endereços, frame allocator |
+| `allocator` | Heap (100KB) com fixed size block allocator |
 
 ## Referências
 
