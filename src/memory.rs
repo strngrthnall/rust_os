@@ -1,6 +1,39 @@
-//! Gerenciamento de memória: paginação e alocação de frames.
+//! # Gerenciamento de Memória: Paginação e Frame Allocation
 //!
-//! Configura page tables e fornece alocação de frames físicos.
+//! ## Paginação no x86_64
+//!
+//! O x86_64 usa paginação de 4 níveis para traduzir endereços virtuais em físicos:
+//!
+//! ```text
+//! Endereço Virtual (48 bits usados)
+//! ┌─────────┬─────────┬─────────┬─────────┬────────────┐
+//! │ P4 Index│ P3 Index│ P2 Index│ P1 Index│ Page Offset  │
+//! │ (9 bits)│ (9 bits)│ (9 bits)│ (9 bits)│  (12 bits)   │
+//! └────┬────┴────┬────┴────┬────┴────┬────┴──────┬─────┘
+//!      │          │          │          │              │
+//!      v          v          v          v              v
+//!    P4 Table → P3 Table → P2 Table → P1 Table → Frame + Offset
+//!    (CR3)      (512 entries cada, 8 bytes/entry)
+//! ```
+//!
+//! ## Frame Allocator
+//!
+//! O bootloader fornece um memory map indicando regiões usáveis.
+//! O `BootInfoFrameAllocator` itera sobre essas regiões para alocar
+//! frames físicos de 4KB sob demanda.
+//!
+//! ## Offset Mapping
+//!
+//! O bootloader mapeia TODA a memória física em um offset virtual.
+//! Ex: Se offset = 0x1000_0000_0000, então:
+//!   - Memória física 0x0 está em virtual 0x1000_0000_0000
+//!   - Memória física 0x1000 está em virtual 0x1000_0000_1000
+//!
+//! Isso permite acessar qualquer endereço físico facilmente.
+//!
+//! ## Estudo baseado em
+//!
+//! [Introduction to Paging](https://os.phil-opp.com/paging-introduction/) - Blog OS
 
 use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
 use x86_64::{

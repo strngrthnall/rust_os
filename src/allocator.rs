@@ -1,10 +1,31 @@
-//! Heap allocator para alocação dinâmica de memória.
+//! # Heap Allocator - Alocação Dinâmica de Memória
 //!
-//! Fornece um global allocator usando fixed size blocks (padrão).
-//! Implementações disponíveis: bump, linked list, fixed size block.
+//! ## Por que precisamos de um heap?
+//!
+//! Sem heap, só podemos usar a stack (tamanho fixo) e variáveis estáticas.
+//! Com heap, podemos usar `Box`, `Vec`, `String`, `Rc`, etc.
+//!
+//! ## Como funciona?
+//!
+//! 1. Reservamos uma região de memória virtual para o heap (100KB em 0x4444_4444_0000)
+//! 2. Mapeamos essas páginas virtuais para frames físicos
+//! 3. Um allocator gerencia essa região, atendendo `alloc` e `dealloc`
+//!
+//! ## Implementações Disponíveis
+//!
+//! | Allocator | Alocação | Liberação | Fragmentação |
+//! |-----------|----------|-----------|---------------|
+//! | Bump | O(1) | Todas juntas | Nenhuma (linear) |
+//! | Linked List | O(n) | O(1) | Alta |
+//! | Fixed Size Block | O(1) | O(1) | Baixa (interna) |
+//!
+//! O **Fixed Size Block** é usado por padrão por ter melhor performance
+//! e fragmentação controlada.
+//!
+//! ## Estudo baseado em
+//!
+//! [Heap Allocation](https://os.phil-opp.com/heap-allocation/) - Blog OS
 
-// use bump::BumpAllocator;
-//use crate::allocator::linked_list::LinkedListAllocator;
 use fixed_size_block::FixedSizeBlockAllocator;
 use x86_64::{
     structures::paging::{

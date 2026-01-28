@@ -1,6 +1,43 @@
-//! Driver VGA text mode - escrita no buffer em 0xb8000.
+//! # Driver VGA Text Mode
 //!
-//! Fornece as macros `print!` e `println!` para output formatado.
+//! ## O que é VGA Text Mode?
+//!
+//! O modo texto VGA é uma forma simples de mostrar texto na tela.
+//! Um buffer de memória em `0xb8000` é mapeado diretamente para a placa de vídeo.
+//!
+//! ## Estrutura do Buffer
+//!
+//! ```text
+//! Endereço 0xb8000 (Memory-Mapped I/O)
+//!          │
+//!          v
+//! ┌─────────────────────────────────────┐
+//! │  80 colunas x 25 linhas = 2000 chars  │
+//! │  Cada char = 2 bytes (ASCII + cor)    │
+//! │  Total = 4000 bytes                   │
+//! └─────────────────────────────────────┘
+//!
+//! Byte de caractere:
+//! ┌────────┬────────┐
+//! │ ASCII  │  Cor   │
+//! │ (8 bit)│ (8 bit)│
+//! └────────┴────────┘
+//!
+//! Byte de cor:
+//! ┌────────────────┐
+//! │ bg(4) │ fg(4) │  <- 16 cores cada
+//! └────────────────┘
+//! ```
+//!
+//! ## Por que Volatile?
+//!
+//! O compilador pode otimizar escritas "inúteis" (que não são lidas).
+//! `Volatile` força cada escrita a realmente acontecer, pois o hardware
+//! lê esse buffer independentemente do código.
+//!
+//! ## Estudo baseado em
+//!
+//! [VGA Text Mode](https://os.phil-opp.com/vga-text-mode/) - Blog OS
 
 use core::fmt::{Arguments, Result, Write};
 use lazy_static::lazy_static;
