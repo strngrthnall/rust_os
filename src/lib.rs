@@ -11,8 +11,15 @@ pub mod serial;
 pub mod vga_buffer;
 pub mod interrupts;
 pub mod gdt;
+pub mod memory;
+pub mod allocator;
 
+extern crate alloc;
+
+#[cfg(test)]
+use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
+use x86_64::instructions::port::Port;
 
 /// Loop infinito com instrução HLT para economia de energia.
 pub fn hlt_loop() -> ! {
@@ -31,8 +38,6 @@ pub enum QemuExitCode {
 
 /// Encerra o QEMU com o exit code especificado.
 pub fn exit_qemu(exit_code: QemuExitCode) {
-    use x86_64::instructions::port::Port;
-
     unsafe {
         let mut port = Port::new(0xf4);
         port.write(exit_code as u32);
@@ -72,10 +77,13 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     hlt_loop();
 }
 
+#[cfg(test)]
+entry_point!(test_kernel_main);
+
 /// Entry point para `cargo test` na lib.
 #[cfg(test)]
 #[unsafe(no_mangle)]
-pub extern "C" fn _start() -> ! {
+fn test_kernel_main(_boot_info: &'static BootInfo) -> ! {
     init();
     test_main();
     hlt_loop();

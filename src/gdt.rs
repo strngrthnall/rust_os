@@ -9,7 +9,12 @@ use x86_64::{
         tss::TaskStateSegment,
     },
     VirtAddr,
+    instructions::{
+        segmentation::{Segment, CS},
+        tables::load_tss,
+    }
 };
+
 
 /// Índice na IST para a stack de double fault.
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
@@ -43,11 +48,6 @@ lazy_static! {
 
 /// Carrega a GDT e configura os registradores CS e TSS.
 pub fn init() {
-    use x86_64::instructions::{
-        segmentation::{Segment, CS},
-        tables::load_tss,
-    };
-
     GDT.0.load();
     unsafe {
         CS::set_reg(GDT.1.code_selector);

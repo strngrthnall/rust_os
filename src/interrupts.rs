@@ -2,11 +2,17 @@
 //!
 //! Configura a IDT e os PICs 8259 para tratar exceções e interrupções de hardware.
 
-use crate::{gdt, print, println};
+use crate::{gdt, hlt_loop, print, println};
 use lazy_static::lazy_static;
 use pic8259::ChainedPics;
-use spin;
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
+use spin::{Mutex};
+use x86_64::{
+    structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
+    registers::control::Cr2,
+    instructions::{port::Port}
+};
+use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
+
 
 /// Índices das interrupções de hardware (IRQs remapeadas).
 #[derive(Debug, Clone, Copy)]
@@ -28,6 +34,19 @@ impl From<InterruptIndex> for usize {
     }
 }
 
+
+extern "x86-interrupt" fn page_fault_handler(
+    stack_frame: InterruptStackFrame,
+    error_code: PageFaultErrorCode
+) {
+    println!("EXCEPTION: PAGE FAULT");
+    println!("Accessed Address: {:?}", Cr2::read());
+    println!("Error code: {:?}", error_code);
+    println!("{:#?}", stack_frame);
+    hlt_loop();
+}
+
+
 // ============================================================================
 // PICs 8259
 // ============================================================================
@@ -39,7 +58,11 @@ pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
 
 /// PICs encadeados (master + slave) com mutex para acesso thread-safe.
 pub static PICS: spin::Mutex<ChainedPics> =
-    spin::Mutex::new(unsafe { ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) });
+    spin::Mutex::new(
+        unsafe { 
+            ChainedPics::new(PIC_1_OFFSET, PIC_2_OFFSET) 
+        }
+    );
 
 // ============================================================================
 // Exception Handlers
@@ -74,9 +97,6 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
 
 /// Handler do teclado (IRQ 1) - lê scancode e imprime caractere.
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
-    use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
-    use spin::Mutex;
-    use x86_64::instructions::port::Port;
 
     lazy_static! {
         static ref KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> = Mutex::new(
@@ -119,6 +139,7 @@ lazy_static! {
         }
         idt[InterruptIndex::Timer.into()].set_handler_fn(timer_interrupt_handler);
         idt[InterruptIndex::Keyboard.into()].set_handler_fn(keyboard_interrupt_handler);
+        idt.page_fault.set_handler_fn(page_fault_handler);
         idt
     };
 }
@@ -131,5 +152,5 @@ pub fn init_idt() {
 /// Testa se breakpoint exception é tratada corretamente.
 #[test_case]
 fn test_breakpoint_exception() {
-    x86_64::instructions::interrupts::int3();
+   x86_64::instructions::interrupts::int3();
 }
